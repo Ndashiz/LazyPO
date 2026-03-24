@@ -241,10 +241,10 @@ input[type="text"]:focus, select:focus, textarea:focus {
         <div class="theme-swatches" id="theme-swatches"></div>
         <div class="theme-sep"></div>
         <div class="field" style="margin:0;flex:1;min-width:120px;">
-          <input type="text" id="email-title" placeholder="Titre (ex: DPnxt CLM)" value="DPnxt CLM" style="font-size:12px;padding:5px 9px;" />
+          <input type="text" id="email-title" placeholder="Titre (ex: DPnxt CLM)" value="" style="font-size:12px;padding:5px 9px;" />
         </div>
         <div class="field" style="margin:0;flex:1.5;min-width:160px;">
-          <input type="text" id="email-subtitle" placeholder="Sous-titre" value="Onboarding · CLM NXT · PB Digital" style="font-size:12px;padding:5px 9px;" />
+          <input type="text" id="email-subtitle" placeholder="Sous-titre" value="" style="font-size:12px;padding:5px 9px;" />
         </div>
       </div>
     </div>
@@ -266,12 +266,12 @@ input[type="text"]:focus, select:focus, textarea:focus {
     <div class="section">
       <div class="section-header">Général</div>
       <div class="row">
-        <div class="field"><label>PI en cours</label><input type="text" id="pi-current" value="Q1 26'" /></div>
-        <div class="field"><label>Prochain PI</label><input type="text" id="pi-next" value="Q2 26'" /></div>
+        <div class="field"><label>PI en cours</label><input type="text" id="pi-current" value="" /></div>
+        <div class="field"><label>Prochain PI</label><input type="text" id="pi-next" value="" /></div>
       </div>
       <div class="row">
-        <div class="field"><label>Deadline prioritisation</label><input type="text" id="deadline" value="11/05" /></div>
-        <div class="field"><label>Sujet email</label><input type="text" id="email-subject" value="DPnxt CLM - Scope of Work Q1/Q2 26'" /></div>
+        <div class="field"><label>Deadline prioritisation</label><input type="text" id="deadline" value="" /></div>
+        <div class="field"><label>Sujet email</label><input type="text" id="email-subject" value="" /></div>
       </div>
       <div class="field">
         <label>Texte d'introduction</label>
@@ -284,26 +284,24 @@ input[type="text"]:focus, select:focus, textarea:focus {
     </div>
 
     <div class="section">
+      <div class="section-header">Signature &amp; Footer</div>
+      <div class="row">
+        <div class="field"><label>Nom</label><input type="text" id="sig-name" placeholder="ex: Jane Doe" /></div>
+        <div class="field"><label>Titre / Rôle</label><input type="text" id="sig-title" placeholder="ex: Product Owner · Digital" /></div>
+      </div>
+      <div class="field"><label>Téléphone fixe</label><input type="text" id="sig-phone" placeholder="ex: +32 2 000 00 00" /></div>
+      <div class="field"><label>Mobile</label><input type="text" id="sig-mobile" placeholder="ex: +32 479 00 00 00" /></div>
+      <div class="field"><label>Email</label><input type="text" id="sig-email" placeholder="ex: j.doe@company.com" /></div>
+      <div class="field"><label>Ligne footer (banque / adresse)</label><textarea id="footer-text" style="min-height:44px;">Bank | Company Name · Address</textarea></div>
+    </div>
+
+    <div class="section">
       <div class="section-header">
         Objectifs PI
         <button class="add-btn small-add-btn" onclick="addObj()">+ Ajouter</button>
       </div>
       <div id="objectives-list">
-        <div class="obj-item">
-          <div class="obj-num obj-counter">1</div>
-          <input type="text" value="Streamline the onboarding process and get ready for a soft launch to accommodate a substantial client base." />
-          <button class="del-btn" onclick="removeObj(this)">×</button>
-        </div>
-        <div class="obj-item">
-          <div class="obj-num obj-counter">2</div>
-          <input type="text" value="DPnxt end-to-end onboarding procedure to prepare Oneflow migration." />
-          <button class="del-btn" onclick="removeObj(this)">×</button>
-        </div>
-        <div class="obj-item">
-          <div class="obj-num obj-counter">3</div>
-          <input type="text" value="Minimize manual efforts related to both Soft launch onboarding (migration &amp; activations of existing clients) to DP Nxt and support activities." />
-          <button class="del-btn" onclick="removeObj(this)">×</button>
-        </div>
+
       </div>
     </div>
 
@@ -374,16 +372,7 @@ function renderThemeSwatches() {
 
 const RELEASE_OPTIONS = ['1/04/26 (16 Apr)','April (16 Apr)','21/05/26 (21 May)','May (21 May)','June 26','July 26',"Q2 26'","Q3 26'",'TBD'];
 
-const DEFAULT_EPICS = [
-  { name:'Oneflow Documentation', ticket:'CRM-4860', desc:'Document validated Oneflow CLM GAPs; DPnxt must document digital E2E onboarding', benefits:['Oneflow Prerequisite'], release:'1/04/26 (16 Apr)' },
-  { name:'Simple Electronic Signature (SES)', ticket:'CRM-4244', desc:'Enable simple e-signature in onboarding portal eliminating Connective; send signed contract via email', benefits:['Stability','Reduce Onboarding Time'], release:'April (16 Apr)' },
-  { name:'Onboarding Bug Fixing', ticket:'CRM-4812', desc:'Identify & fix minor improvements since pilot phase to streamline DPnxt onboarding', benefits:['↓ Client Issues','↓ Support Workload','↑ Client Experience'], release:'May (21 May)' },
-  { name:'CC Client Migration (V2)', ticket:'CRM-4300', desc:'V2 improving/automating container switch process from CC to DPnxt', benefits:['↓ Transfer Time','↓ Servicing Costs'], release:'May (21 May)' },
-  { name:'AML Updates & Dealbreaker Alignment', ticket:'CRM-4336', desc:'Minor AML changes & revised dealbreakers for consistency between existing and new clients', benefits:['Regulatory Compliance','Consistency'], release:'May (21 May)' },
-  { name:'Funnel Mgmt — Analytics Tags', ticket:'CRM-3682', desc:'Google Analytics tag integration for onboarding portal; Analysis in progress', benefits:['Data-Driven Decisions','↑ Client Satisfaction'], release:'May (21 May)' },
-  { name:'Redesign V2', ticket:'CRM-4379', desc:'Q2 V2 with copywriter feedback & design system alignment', benefits:['Brand Consistency','↑ Client Satisfaction'], release:'May (21 May)' },
-  { name:'DPnxt ONB — Capital Gain Tax', ticket:'CRM-4843', desc:'Phase 1: Manual process via CC for existing clients to opt out; Phase 2: Opt-in/opt-out selection integrated in DPnxt onboarding', benefits:['Regulatory Feature'], release:'May (21 May)' },
-];
+const DEFAULT_EPICS = [];
 
 let epics = JSON.parse(JSON.stringify(DEFAULT_EPICS));
 let dragSrc = null;
@@ -566,8 +555,14 @@ function buildEmailHtml() {
   const dl       = document.getElementById('deadline').value.trim();
   const intro    = document.getElementById('intro-text').value.trim();
   const backlog  = document.getElementById('backlog-text').value.trim();
-  const titleTxt = document.getElementById('email-title').value.trim() || 'DPnxt CLM';
-  const subTxt   = document.getElementById('email-subtitle').value.trim() || 'Onboarding · CLM NXT · PB Digital';
+  const titleTxt  = document.getElementById('email-title').value.trim() || 'Scope of Work';
+  const subTxt    = document.getElementById('email-subtitle').value.trim();
+  const sigName   = document.getElementById('sig-name').value.trim() || 'Your Name';
+  const sigTitle  = document.getElementById('sig-title').value.trim() || 'Product Owner';
+  const sigPhone  = document.getElementById('sig-phone').value.trim();
+  const sigMobile = document.getElementById('sig-mobile').value.trim();
+  const sigEmail  = document.getElementById('sig-email').value.trim();
+  const footerTxt = document.getElementById('footer-text').value.trim();
   const objs = [...document.querySelectorAll('#objectives-list input[type="text"]')].map(el => el.value.trim()).filter(Boolean);
 
   // Theme shorthand
@@ -733,21 +728,14 @@ function buildEmailHtml() {
 
   <!-- SIGNATURE -->
   <tr><td style="padding:20px 32px 24px 32px;">
-    <p style="margin:0 0 2px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:15px;font-weight:bold;color:${T.table};">Simon Goffin</p>
-    <p style="margin:0 0 8px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;color:#4b5563;">Product Owner CLM PB &amp; DPnxt Onboarding &middot; PB Digital</p>
-    <p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:12px;color:#0369a1;">
-      &#128222; +32 2 662 86 64 &nbsp;&middot;&nbsp; &#128241; +32 479 48 76 08 &nbsp;&middot;&nbsp;
-      <a href="mailto:s.goffin@degroofpetercam.com" style="color:#0369a1;text-decoration:none;">s.goffin@degroofpetercam.com</a>
-    </p>
+    <p style="margin:0 0 2px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:15px;font-weight:bold;color:${T.table};">${esc(sigName)}</p>
+    <p style="margin:0 0 8px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;color:#4b5563;">${esc(sigTitle)}</p>
+    <p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:12px;color:#0369a1;">${[sigPhone ? '&#128222; ' + esc(sigPhone) : '', sigMobile ? '&#128241; ' + esc(sigMobile) : '', sigEmail ? '<a href="mailto:' + esc(sigEmail) + '" style="color:#0369a1;text-decoration:none;">' + esc(sigEmail) + '</a>' : ''].filter(Boolean).join(' &nbsp;&middot;&nbsp; ')}</p>
   </td></tr>
 
   <!-- FOOTER -->
   <tr><td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:16px 32px;border-top:1px solid #e5e7eb;">
-    <p style="margin:0 0 4px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;color:#9ca3af;text-align:center;">
-      <strong>Bank | Banque Degroof Petercam nv | sa</strong><br>
-      Rue de l&rsquo;Industrie 44 Nijverheidsstraat | 1040 Brussels<br>
-      BTW | TVA BE 0403 212 172 &nbsp;&middot;&nbsp; RPR Brussel | RPM Bruxelles &ndash; FSMA 040460 A
-    </p>
+    <p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;color:#9ca3af;text-align:center;">${esc(footerTxt)}</p>
   </td></tr>
 
 </table>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
   <meta charset="UTF-8">
@@ -215,10 +215,10 @@
   <div class="spacer"></div>
 
   <div class="actions">
-    <div id="status" class="status">Sauvegardé</div>
+    <div id="status" class="status">Saved</div>
     <button class="header-btn" onclick="focusForm()">
       <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" fill="none"/></svg>
-      Ajouter
+      Add
     </button>
   </div>
 </header>
@@ -227,8 +227,8 @@
   <h1>💾 Jira Query Saver</h1>
 
   <div class="form">
-    <input type="text" id="name" placeholder="Nom de la query" />
-    <textarea id="query" placeholder="Ta JQL ici..."></textarea>
+    <input type="text" id="name" placeholder="Query name" />
+    <textarea id="query" placeholder="Your JQL here..."></textarea>
 
     <select id="tag">
       <option value="DPnxt">DPnxt</option>
@@ -236,7 +236,7 @@
       <option value="PB">PB</option>
     </select>
 
-    <button onclick="addQuery()">Ajouter</button>
+    <button onclick="addQuery()">Add</button>
   </div>
 
   <div id="groups"></div>
@@ -244,11 +244,31 @@
 
 <script>
   const groupsEl = document.getElementById('groups');
-
   const TAG_ORDER = ['DPnxt', 'CLM', 'PB'];
 
-  function loadQueries() {
-    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
+  // Wait for auth.js to expose window.sb
+  let currentUserId = null;
+
+  async function init() {
+    const session = await LazyAuth.requireAuthOrPopup();
+    if (!session) return;
+    currentUserId = session.user.id;
+    await loadQueries();
+  }
+
+  async function loadQueries() {
+    groupsEl.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">Loading…</p>';
+
+    const { data: queries, error } = await window.sb
+      .from('jira_queries')
+      .select('*')
+      .eq('user_id', currentUserId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      groupsEl.innerHTML = `<p style="color:#e53e3e;text-align:center;padding:24px;">Error loading queries: ${error.message}</p>`;
+      return;
+    }
 
     groupsEl.innerHTML = '';
 
@@ -258,34 +278,33 @@
 
       const groupDiv = document.createElement('div');
       groupDiv.className = 'group';
-
       groupDiv.innerHTML = `<h2>${tag}</h2>`;
 
       const list = document.createElement('div');
       list.className = 'query-list';
 
-      groupQueries.forEach((q, index) => {
-        const realIndex = queries.indexOf(q);
-
+      groupQueries.forEach(q => {
         const card = document.createElement('div');
         card.className = 'card';
-
         card.innerHTML = `
           <span class="tag ${q.tag}">${q.tag}</span>
-          <h3>${q.name}</h3>
-          <p>${q.query}</p>
+          <h3>${esc(q.name)}</h3>
+          <p>${esc(q.query)}</p>
           <div class="actions">
-            <button class="small-btn copy" onclick="copyQuery(${realIndex})">Copier</button>
-            <button class="small-btn delete" onclick="deleteQuery(${realIndex})">Supprimer</button>
+            <button class="small-btn copy" onclick="copyQuery('${q.id}', this)">Copy</button>
+            <button class="small-btn delete" onclick="deleteQuery('${q.id}', this)">Delete</button>
           </div>
         `;
-
         list.appendChild(card);
       });
 
       groupDiv.appendChild(list);
       groupsEl.appendChild(groupDiv);
     });
+
+    if (queries.length === 0) {
+      groupsEl.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">No queries yet. Add your first one above!</p>';
+    }
   }
 
   function showStatus() {
@@ -298,42 +317,59 @@
     document.getElementById('name').focus();
   }
 
-  function addQuery() {
-    const name = document.getElementById('name').value.trim();
+  async function addQuery() {
+    const name  = document.getElementById('name').value.trim();
     const query = document.getElementById('query').value.trim();
-    const tag = document.getElementById('tag').value;
+    const tag   = document.getElementById('tag').value;
 
-    if (!name || !query) {
-      alert('Remplis les champs !');
-      return;
-    }
+    if (!name || !query) { alert('Please fill in all fields!'); return; }
 
-    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
-    queries.push({ name, query, tag });
-    localStorage.setItem('jiraQueries', JSON.stringify(queries));
-    showStatus();
+    const { error } = await window.sb
+      .from('jira_queries')
+      .insert({ user_id: currentUserId, name, query, tag });
 
-    document.getElementById('name').value = '';
+    if (error) { alert('Error saving query: ' + error.message); return; }
+
+    document.getElementById('name').value  = '';
     document.getElementById('query').value = '';
-
-    loadQueries();
-  }
-
-  function deleteQuery(index) {
-    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
-    queries.splice(index, 1);
-    localStorage.setItem('jiraQueries', JSON.stringify(queries));
     showStatus();
-    loadQueries();
+    await loadQueries();
   }
 
-  function copyQuery(index) {
-    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
-    navigator.clipboard.writeText(queries[index].query);
-    alert('Query copiée !');
+  async function deleteQuery(id, btn) {
+    btn.disabled = true;
+    const { error } = await window.sb
+      .from('jira_queries')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', currentUserId);
+
+    if (error) { alert('Error deleting query: ' + error.message); btn.disabled = false; return; }
+    showStatus();
+    await loadQueries();
   }
 
-  loadQueries();
+  async function copyQuery(id, btn) {
+    const { data, error } = await window.sb
+      .from('jira_queries')
+      .select('query')
+      .eq('id', id)
+      .single();
+
+    if (error || !data) { alert('Could not copy query.'); return; }
+    await navigator.clipboard.writeText(data.query);
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Init after auth.js is ready
+  window.addEventListener('load', init);
 </script>
 
 <script src="popup.js"></script>

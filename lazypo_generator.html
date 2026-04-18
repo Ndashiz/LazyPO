@@ -881,5 +881,68 @@ attachLiveListeners();
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>document.addEventListener("DOMContentLoaded", function(){ LazyAuth.requireAuthOrPopup(); });</script>
+<script>
+/* ── Demo Mode ── */
+window.loadDemoData = function () {
+  /* Form fields */
+  document.getElementById('email-title').value    = 'Scope of Work — PI 2026.2';
+  document.getElementById('email-subtitle').value = 'Platform Delivery Team';
+  document.getElementById('pi-current').value     = 'PI 2026.2';
+  document.getElementById('pi-next').value        = 'PI 2026.3';
+  document.getElementById('deadline').value       = '2026-05-02';
+  document.getElementById('email-subject').value  = '[LazyPO] SoW — PI 2026.2 · Platform Delivery';
+  document.getElementById('intro-text').value     =
+    'Please find below the Scope of Work for PI 2026.2, covering all committed deliverables for the Platform Delivery team. This document reflects the outcomes of our last PI Planning session.';
+  document.getElementById('backlog-text').value   =
+    'Items deferred to PI 2026.3 will be reviewed during the upcoming PI Planning session. Contact the PO to prioritise your backlog entries before the deadline.';
+  document.getElementById('sig-name').value       = 'Alex Martin';
+  document.getElementById('sig-title').value      = 'Product Owner — Platform Delivery';
+  document.getElementById('sig-email').value      = 'alex.martin@company.com';
+  document.getElementById('sig-phone').value      = '+32 2 123 45 67';
+  document.getElementById('sig-mobile').value     = '+32 477 89 01 23';
+  document.getElementById('footer-text').value    = 'Platform Delivery · LazyPO v2.0 · Confidential';
+
+  /* Objectives */
+  var objList = document.getElementById('objectives-list');
+  objList.innerHTML = '';
+  ['Deliver API Gateway v2 on time', 'Achieve 99.9% platform uptime', 'Reduce onboarding time by 50%'].forEach(function (txt, i) {
+    var item = document.createElement('div');
+    item.className = 'obj-item';
+    item.innerHTML = '<div class="obj-num obj-counter">' + (i + 1) + '</div><input type="text" value="' + txt + '" /><button class="del-btn" onclick="removeObj(this)">×</button>';
+    objList.appendChild(item);
+  });
+
+  /* Epics */
+  epics = [
+    {
+      name: 'Authentication Overhaul', ticket: 'PLT-101',
+      desc: 'Migrate to OAuth 2.0 SSO and implement MFA across all platform services.',
+      benefits: ['Security compliance', 'Reduced login friction', 'GDPR alignment'],
+      release: '1/04/26 (16 Apr)'
+    },
+    {
+      name: 'API Gateway v2', ticket: 'PLT-102',
+      desc: 'Deploy new API gateway with rate limiting, versioning and real-time analytics dashboard.',
+      benefits: ['99.9% SLA guaranteed', '3× faster routing', 'Live monitoring'],
+      release: 'May (21 May)'
+    },
+    {
+      name: 'Data Pipeline Refactor', ticket: 'PLT-103',
+      desc: 'Replace legacy batch ETL with an event-driven streaming architecture (Kafka + Flink).',
+      benefits: ['Sub-second latency', 'Scales to 10M events/day', '30% lower infra cost'],
+      release: 'May (21 May)'
+    },
+    {
+      name: 'Developer Portal Launch', ticket: 'PLT-104',
+      desc: 'Public dev portal with interactive API docs, sandbox environment and usage analytics.',
+      benefits: ['Onboarding in under 1 hour', 'Self-service API keys', 'Partner ecosystem ready'],
+      release: 'June 26'
+    },
+  ];
+  renderEpics();
+  generate();
+};
+</script>
+<script src="demo.js"></script>
 </body>
 </html>

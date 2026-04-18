@@ -341,6 +341,21 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>document.addEventListener("DOMContentLoaded", function(){ LazyAuth.requireAuthOrPopup(); });</script>
-
+<script>
+/* ── Demo Mode ── */
+window.loadDemoData = function () {
+  var demo = [
+    { name: 'Open bugs — current sprint',  query: 'project = DPNXT AND issuetype = Bug AND sprint in openSprints() AND status != Done ORDER BY priority DESC', tag: 'DPnxt' },
+    { name: 'My open tickets',             query: 'assignee = currentUser() AND status not in (Done, Closed) ORDER BY updated DESC',                           tag: 'DPnxt' },
+    { name: 'Blockers this sprint',        query: 'project = DPNXT AND priority = Blocker AND sprint in openSprints() ORDER BY created ASC',                   tag: 'DPnxt' },
+    { name: 'CLM — all open',              query: 'project = CLM AND status not in (Done, Closed, Cancelled) ORDER BY priority ASC',                           tag: 'CLM'   },
+    { name: 'CLM — updated this week',     query: 'project = CLM AND updated >= -7d ORDER BY updated DESC',                                                    tag: 'CLM'   },
+    { name: 'PB backlog by rank',          query: 'project = PB AND status = "Backlog" AND issuetype = Story ORDER BY rank ASC',                               tag: 'PB'    },
+  ];
+  localStorage.setItem('jiraQueries', JSON.stringify(demo));
+  if (typeof loadQueries === 'function') loadQueries();
+};
+</script>
+<script src="demo.js"></script>
 </body>
 </html>

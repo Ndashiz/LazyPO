@@ -412,6 +412,17 @@ body {
       </div>
     </div>
 
+    <!-- ── Active Sessions ── -->
+    <div class="acc-section">
+      <div class="acc-section-title">Active Sessions</div>
+      <div id="sessionsContainer">
+        <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;">
+          <span class="spin" style="border-color:rgba(255,255,255,0.2);border-top-color:var(--muted);"></span>
+          Loading sessions…
+        </div>
+      </div>
+    </div>
+
     <!-- ── Sign out ── -->
     <div class="acc-section" style="border-color:rgba(239,68,68,0.15);">
       <div class="acc-section-title" style="border-color:rgba(239,68,68,0.12);color:#f87171;">Danger zone</div>
@@ -618,6 +629,85 @@ function clearMsg(id) {
   el.className = 'inline-msg';
   el.textContent = '';
 }
+
+/* ── Active Sessions ── */
+function formatLastSeen(ts) {
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1)  return 'Just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)  return `${hrs} hour${hrs > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days} day${days > 1 ? 's' : ''} ago`;
+}
+
+async function loadSessions() {
+  const container = document.getElementById('sessionsContainer');
+  if (!container) return;
+
+  const sessions = await window.LazySession?.getSessions?.();
+  if (!sessions || sessions.length === 0) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--muted);">No active sessions found.</div>';
+    return;
+  }
+
+  const currentId = window.LazySession?.getCurrentSessionId?.();
+  const fiveMinsAgo = Date.now() - 5 * 60 * 1000;
+
+  container.innerHTML = sessions.map(s => {
+    const isCurrent = s.id === currentId;
+    const isRecent  = new Date(s.last_seen).getTime() > fiveMinsAgo;
+    const dotColor  = (s.is_active && isRecent) ? '#22c55e' : '#f59e0b';
+    const dotTitle  = (s.is_active && isRecent) ? 'Active now' : 'Stale / inactive';
+
+    return `
+      <div style="
+        display:flex;align-items:center;justify-content:space-between;gap:12px;
+        padding:12px 14px;background:var(--surface2);border:1px solid var(--border2);
+        border-radius:10px;margin-bottom:8px;flex-wrap:wrap;
+      ">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <span title="${dotTitle}" style="
+            width:8px;height:8px;border-radius:50%;
+            background:${dotColor};flex-shrink:0;
+            box-shadow:0 0 6px ${dotColor};
+          "></span>
+          <div style="min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              ${s.device_info || 'Unknown device'}
+              ${isCurrent ? '<span style="font-size:10px;font-weight:700;letter-spacing:0.05em;padding:2px 8px;border-radius:20px;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(96,165,250,0.25);text-transform:uppercase;">Current</span>' : ''}
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Last seen: ${formatLastSeen(s.last_seen)}</div>
+          </div>
+        </div>
+        <button
+          onclick="revokeSession('${s.id}')"
+          ${isCurrent ? 'disabled title="Cannot revoke current session"' : ''}
+          style="
+            padding:6px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;
+            font-size:12px;font-weight:600;cursor:${isCurrent ? 'not-allowed' : 'pointer'};
+            background:${isCurrent ? 'transparent' : 'rgba(239,68,68,0.08)'};
+            border:1px solid ${isCurrent ? 'var(--border2)' : 'rgba(239,68,68,0.25)'};
+            color:${isCurrent ? 'var(--muted)' : '#f87171'};
+            opacity:${isCurrent ? '0.4' : '1'};
+            transition:background 0.15s;white-space:nowrap;flex-shrink:0;
+          "
+          onmouseover="if(!this.disabled)this.style.background='rgba(239,68,68,0.18)'"
+          onmouseout="if(!this.disabled)this.style.background='rgba(239,68,68,0.08)'"
+        >Revoke</button>
+      </div>`;
+  }).join('');
+}
+
+async function revokeSession(id) {
+  if (!window.LazySession) return;
+  await window.LazySession.revokeSession(id);
+  await loadSessions();
+}
+
+// Give session.js time to register before loading session list
+setTimeout(() => loadSessions(), 800);
 </script>
 <script src="focusfm.js"></script>
 </body>

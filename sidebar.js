@@ -387,4 +387,115 @@
   overlay.addEventListener('click', closeSidebar);
   closeBtn.addEventListener('click', closeSidebar);
 
+  /* ═══════════════════════════════════════════════════
+     SPA NAVIGATION — keeps Spotify playing across pages
+  ═══════════════════════════════════════════════════ */
+
+  // Scripts that must NOT be re-executed on navigation (already live in memory)
+  const SPA_SKIP = [
+    'sidebar.js','auth.js','focusfm.js','session.js',
+    'countdown.js','popup.js','demo.js','apis.js',
+    'supabase-js','three.r134','vanta.net',
+  ];
+
+  // IDs of elements that must survive body replacement
+  const SPA_PERSIST = [
+    'sb-burger','sb-overlay','sb-sidebar',
+    '_fm_mini','_fm_panel','_fm_track_toast','_fm_toast','_sess_warn',
+    '_fm_css','sb-styles',
+  ];
+
+  function _updateActiveItem(url) {
+    const curr = url.split('/').pop() || 'index.html';
+    document.querySelectorAll('[data-sb-id]').forEach(item => {
+      const a = item.querySelector('a[href]');
+      item.classList.toggle('active', !!a && a.getAttribute('href') === curr);
+    });
+  }
+
+  async function _spaNavigate(url) {
+    // Detach persisted elements before wiping body
+    const saved = SPA_PERSIST
+      .map(id => document.getElementById(id))
+      .filter(Boolean)
+      .map(el => { el.remove(); return el; });
+
+    try {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('fetch ' + r.status);
+      const html = await r.text();
+      const doc  = new DOMParser().parseFromString(html, 'text/html');
+
+      // Update title
+      document.title = doc.title;
+
+      // Swap page-scoped <style> blocks in <head>
+      document.querySelectorAll('head style[data-spapage]').forEach(s => s.remove());
+      doc.querySelectorAll('head style').forEach(st => {
+        const cl = st.cloneNode(true);
+        cl.setAttribute('data-spapage', '1');
+        document.head.appendChild(cl);
+      });
+
+      // Replace body content
+      document.body.innerHTML = doc.body.innerHTML;
+
+      // Restore persisted elements
+      saved.forEach(el => document.body.appendChild(el));
+
+      // Re-run page scripts in order (skip shared ones)
+      const tasks = [];
+      doc.body.querySelectorAll('script').forEach(s => {
+        if (s.src) {
+          if (SPA_SKIP.some(m => s.src.includes(m))) return;
+          if (document.querySelector(`script[src="${s.src}"]`)) return;
+          tasks.push({ type: 'ext', src: s.src });
+        } else if (s.textContent.trim()) {
+          tasks.push({ type: 'inline', code: s.textContent });
+        }
+      });
+
+      for (const t of tasks) {
+        await new Promise(res => {
+          const el = document.createElement('script');
+          if (t.type === 'ext') {
+            el.src = t.src; el.onload = res; el.onerror = res;
+          } else {
+            el.textContent = t.code;
+          }
+          document.body.appendChild(el);
+          if (t.type === 'inline') res();
+        });
+      }
+
+      history.pushState({ spa: url }, document.title, url);
+      window.scrollTo(0, 0);
+      _updateActiveItem(url);
+      closeSidebar();
+
+    } catch (_) {
+      // Fallback: restore elements + hard navigate
+      saved.forEach(el => document.body.appendChild(el));
+      location.href = url;
+    }
+  }
+
+  // Intercept sidebar link clicks
+  document.addEventListener('click', e => {
+    const link = e.target.closest('.sb-item-link[href]');
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (!href || /^https?:\/\//.test(href) || href.startsWith('#')) return;
+    e.preventDefault();
+    _spaNavigate(href);
+  }, true);
+
+  // Handle browser back/forward
+  window.addEventListener('popstate', e => {
+    _spaNavigate(e.state?.spa || location.href);
+  });
+
+  // Register current page so popstate works on first back
+  history.replaceState({ spa: location.href }, document.title, location.href);
+
 })();

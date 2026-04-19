@@ -363,6 +363,14 @@ if (new URLSearchParams(window.location.search).get('pending') === '1') {
   showMsg('Your account is pending approval. You\'ll get access as soon as it\'s approved.', 'success');
 }
 
+// ── show auto-logout reason messages ──────────────────
+const reason = new URLSearchParams(window.location.search).get('reason');
+if (reason === 'inactivity') {
+  showMsg('You were automatically signed out after 2 hours of inactivity.', 'success');
+} else if (reason === 'max_session') {
+  showMsg('Your session has expired after 8 hours. Please sign in again.', 'success');
+}
+
 // ── set button loading state ───────────────────────────
 function setLoading(btnId, loading, label) {
   const btn = document.getElementById(btnId);

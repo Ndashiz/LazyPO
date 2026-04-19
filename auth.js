@@ -156,6 +156,14 @@
       if (event === 'SIGNED_OUT') window.location.href = LOGIN_PAGE;
       if (event === 'SIGNED_IN')  renderNavUser();
     });
+
+    // Dynamically load session manager for authenticated users
+    const { data: { session } } = await window.sb.auth.getSession();
+    if (session && !document.querySelector('script[src="session.js"]')) {
+      const s = document.createElement('script');
+      s.src = 'session.js';
+      document.head.appendChild(s);
+    }
   }
 
   /* ── Render sidebar footer ───────────────────────────────────── */

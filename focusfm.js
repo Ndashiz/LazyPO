@@ -41,6 +41,7 @@
     lastPlaylist: 'fm_last_playlist',
     focusMode:    'fm_focus_mode',
     plTab:        'fm_playlist_tab',
+    wasPlaying:   'fm_was_playing',
   };
 
   /* ── State ──────────────────────────────────────────────────────── */
@@ -177,7 +178,10 @@
       });
       player.addListener('ready', ({ device_id }) => {
         deviceId = device_id;
-        api('/me/player', { method:'PUT', body: JSON.stringify({ device_ids:[device_id], play:false }) });
+        // Resume playback seamlessly if music was playing before navigation
+        const wasPlaying = localStorage.getItem(K.wasPlaying) === '1';
+        localStorage.removeItem(K.wasPlaying);
+        api('/me/player', { method:'PUT', body: JSON.stringify({ device_ids:[device_id], play: wasPlaying }) });
         loadUserPlaylists();
       });
       player.addListener('player_state_changed', state => {
@@ -306,12 +310,12 @@
 /* Mini player — floating, bottom-right */
 #_fm_mini {
   position: fixed; bottom: 16px; right: 16px; z-index: 300;
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 8px;
   background: #161616; border: 1px solid #282828;
   border-radius: 14px; padding: 8px 12px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
   font-family: 'DM Sans', sans-serif;
-  min-width: 220px; max-width: 340px;
+  min-width: 240px; max-width: 380px;
   cursor: default;
   transition: box-shadow 0.2s, border-color 0.2s;
   animation: fm-pop 0.3s cubic-bezier(0.34,1.56,0.64,1);
@@ -512,10 +516,16 @@ html.fm-focus-mode #_fm_mini { border-color:#fbbf24; box-shadow:0 0 20px rgba(25
         <div class="fm-mini-track" title="${esc(name)}">${esc(name)}</div>
         <div class="fm-mini-artist">${esc(by)}</div>
       </div>
+      <button class="fm-mini-btn" id="_fm_mini_prev" title="Previous (⌘←)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+      </button>
       <button class="fm-mini-btn fm-mini-play" id="_fm_mini_play" title="${isPaused?'Play':'Pause'}">
         ${isPaused
           ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
           : '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'}
+      </button>
+      <button class="fm-mini-btn" id="_fm_mini_next" title="Next (⌘→)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="m6 18 8.5-6L6 6v12zm2-6zm8.5-6H18v12h-1.5z"/></svg>
       </button>
       <button class="fm-mini-btn fm-mini-expand" id="_fm_mini_expand" title="${isExpanded?'Collapse':'Expand'}">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -523,7 +533,9 @@ html.fm-focus-mode #_fm_mini { border-color:#fbbf24; box-shadow:0 0 20px rgba(25
         </svg>
       </button>`;
 
+    el.querySelector('#_fm_mini_prev')?.addEventListener('click', e => { e.stopPropagation(); prevTrack(); });
     el.querySelector('#_fm_mini_play')?.addEventListener('click', e => { e.stopPropagation(); togglePlay(); });
+    el.querySelector('#_fm_mini_next')?.addEventListener('click', e => { e.stopPropagation(); nextTrack(); });
     el.querySelector('#_fm_mini_expand')?.addEventListener('click', e => { e.stopPropagation(); toggleExpand(); });
   }
 
@@ -603,7 +615,7 @@ html.fm-focus-mode #_fm_mini { border-color:#fbbf24; box-shadow:0 0 20px rgba(25
       <div class="fm-panel-foot">
         <div class="fm-device">📱 ${deviceId ? 'LazyPO Focus FM' : 'No device'}</div>
         <button class="fm-focus-btn${isFocusMode()?' fm-focus-on':''}" id="_fm_focus_btn">${isFocusMode()?'⚡ Focus ON':'⚡ Focus Mode'}</button>
-        <button class="fm-disc-btn" id="_fp_disc">Disc.</button>
+        <button class="fm-disc-btn" id="_fp_disc">Disconnect</button>
       </div>`;
 
     // Wire
@@ -707,6 +719,11 @@ html.fm-focus-mode #_fm_mini { border-color:#fbbf24; box-shadow:0 0 20px rgba(25
 
     render();
     initKeys();
+
+    // Save playback state before page navigation so next page can resume
+    window.addEventListener('beforeunload', () => {
+      localStorage.setItem(K.wasPlaying, isPaused ? '0' : '1');
+    });
 
     if (isFocusMode()) document.documentElement.classList.add('fm-focus-mode');
 

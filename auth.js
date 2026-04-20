@@ -206,6 +206,11 @@
     const isAdmin  = profile?.is_admin || false;
     const initial  = username[0].toUpperCase();
 
+    /* Broadcast profile to other modules (e.g. sidebar for admin-only items) */
+    document.dispatchEvent(new CustomEvent('lazypo:profile', {
+      detail: { isAdmin, username, email, avatar }
+    }));
+
     footer.innerHTML = `
       <div class="user-widget" id="authWidget">
         <button class="user-trigger" onclick="window.__authToggleMenu(event)">

@@ -400,6 +400,14 @@
     color: #c9a43a;
   }
 
+  /* ─── Changelog table ─── */
+  .cl-sha { font-family:'DM Mono',monospace; font-size:12px; white-space:nowrap; }
+  .cl-sha a { color:var(--accent2); text-decoration:none; }
+  .cl-sha a:hover { text-decoration:underline; }
+  .cl-msg { color:var(--text); }
+  .cl-author { color:var(--muted); font-size:12px; white-space:nowrap; }
+  .cl-date { color:var(--muted); font-size:12px; white-space:nowrap; }
+
   /* scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--surface); }
@@ -444,6 +452,7 @@
   <div class="toc-section">Référence</div>
   <a href="#apis">APIs externes</a>
   <a href="#localstorage">localStorage Map</a>
+  <a href="#changelog">★ Dernières modifs</a>
 </nav>
 
 <!-- ══════════════════════════════════════════

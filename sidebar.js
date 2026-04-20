@@ -78,6 +78,15 @@
       label: 'My Account',
       url: 'account.html',
       desc: 'Manage your profile, avatar and password.'
+    },
+    {
+      id: 'docs',
+      icon: '📖',
+      label: 'Documentation',
+      url: 'docs/architecture.html',
+      newTab: true,
+      adminOnly: true,
+      desc: 'Architecture technique, schémas ER et flux système — admins uniquement.'
     }
   ];
 
@@ -317,8 +326,25 @@
 
   const styleEl = document.createElement('style');
   styleEl.id = 'sb-styles';
-  styleEl.textContent = css;
+  styleEl.textContent = css + `
+    /* ── Admin-only items: hidden until profile confirms is_admin ── */
+    .sb-admin-only { display: none; }
+    .sb-admin-only.sb-admin-visible { display: block; }
+    /* Subtle gold tint for admin item icon */
+    .sb-admin-only.sb-admin-visible .sb-icon { background: rgba(251,191,36,.10); }
+    .sb-admin-only.sb-admin-visible .sb-item-link { color: #6b6b4a; }
+    .sb-admin-only.sb-admin-visible:hover .sb-item-link { color: #fef3c7; }
+    .sb-admin-only.sb-admin-visible:hover .sb-icon { background: rgba(251,191,36,.18); }
+  `;
   document.head.appendChild(styleEl);
+
+  /* Show admin-only items once auth.js resolves the profile */
+  document.addEventListener('lazypo:profile', function (e) {
+    if (!e.detail?.isAdmin) return;
+    document.querySelectorAll('.sb-admin-only').forEach(el => {
+      el.classList.add('sb-admin-visible');
+    });
+  });
 
   /* ═══════════════════════════════════════════════════
      HTML BUILDER
@@ -326,16 +352,18 @@
   function buildItem(item) {
     if (item.divider) return '<div class="sb-divider"></div>';
 
-    const active     = isActive(item) ? ' active' : '';
-    const tag        = item.url ? 'a' : 'button';
-    const hrefAttr   = item.url ? `href="${item.url}"` : 'type="button"';
-    const clickAttr  = !item.url
+    const active      = isActive(item) ? ' active' : '';
+    const adminClass  = item.adminOnly ? ' sb-admin-only' : '';
+    const tag         = item.url ? 'a' : 'button';
+    const hrefAttr    = item.url ? `href="${item.url}"` : 'type="button"';
+    const targetAttr  = item.newTab ? 'target="_blank" rel="noopener"' : '';
+    const clickAttr   = !item.url
       ? `onclick="${item.onClick || `window.showUnavailablePopup && window.showUnavailablePopup('${item.label}')`}"`
       : '';
 
     return `
-      <div class="sb-item${active}" data-sb-id="${item.id}">
-        <${tag} class="sb-item-link" ${hrefAttr} ${clickAttr}>
+      <div class="sb-item${active}${adminClass}" data-sb-id="${item.id}">
+        <${tag} class="sb-item-link" ${hrefAttr} ${targetAttr} ${clickAttr}>
           <div class="sb-icon">${item.icon}</div>
           <span class="sb-label">${item.label}</span>
         </${tag}>

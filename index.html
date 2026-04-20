@@ -244,6 +244,29 @@ body {
 .product-card:nth-child(4) { animation-delay: 0.26s; }
 .product-card:nth-child(5) { animation-delay: 0.32s; }
 
+/* ── Admin-only card ── */
+.product-card.admin-only { display: none; }
+.product-card.admin-only.admin-visible {
+  display: flex;
+  border-color: rgba(167,139,250,.22);
+  background: linear-gradient(135deg, rgba(139,92,246,.06) 0%, rgba(12,12,12,0) 60%);
+}
+.product-card.admin-only.admin-visible:hover {
+  border-color: rgba(167,139,250,.45);
+  box-shadow: 0 8px 28px rgba(139,92,246,.15);
+}
+.admin-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 2px 7px; border-radius: 100px;
+  background: rgba(139,92,246,.12);
+  border: 1px solid rgba(167,139,250,.25);
+  color: #a78bfa;
+  font-family: 'DM Mono', monospace;
+  width: fit-content;
+}
+
 .product-icon {
   width: 36px; height: 36px; border-radius: 9px;
   background: var(--faint);
@@ -394,6 +417,15 @@ body {
         <div class="product-desc">Stay locked on your priorities and ship faster.</div>
       </div>
 
+      <!-- Admin-only: Internal Technical Documentation -->
+      <a href="docs/architecture.html" target="_blank" rel="noopener"
+         class="product-card admin-only" id="card-admin-docs">
+        <div class="product-icon" style="background:rgba(139,92,246,.12);font-size:19px;">📖</div>
+        <div class="product-name">Internal Technical Docs</div>
+        <div class="product-desc">Architecture, ER schema, system flows — updated on every deploy.</div>
+        <div class="admin-badge">⚙️ Admin only</div>
+      </a>
+
     </div>
   </section>
 
@@ -419,6 +451,15 @@ body {
   })();
 </script>
 <script>document.addEventListener("DOMContentLoaded", function(){ LazyAuth.requireAuthOrPopup(); });</script>
+<script>
+  /* Reveal admin-only cards when profile confirms is_admin */
+  document.addEventListener('lazypo:profile', function (e) {
+    if (!e.detail?.isAdmin) return;
+    document.querySelectorAll('.product-card.admin-only').forEach(function (el) {
+      el.classList.add('admin-visible');
+    });
+  });
+</script>
 
 <script src="focusfm.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>

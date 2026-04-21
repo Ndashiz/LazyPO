@@ -850,6 +850,62 @@ body { padding-left: 64px; }
 }
 #qz-toast.show { transform: translateX(-50%) translateY(0); }
 
+/* ── Bulk action bar ── */
+.bulk-bar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(59,130,246,.08);
+  border: 1px solid rgba(96,165,250,.2);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  animation: fadeUp .2s ease;
+}
+.bulk-bar.visible { display: flex; }
+.bulk-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent2);
+  font-family: 'DM Mono', monospace;
+  margin-right: 4px;
+}
+.bulk-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 7px; border: 1px solid;
+  font-size: 12.5px; font-weight: 500; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all .15s;
+}
+.bulk-btn.danger {
+  background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); color: #f87171;
+}
+.bulk-btn.danger:hover { background: rgba(239,68,68,.18); }
+.bulk-btn.system {
+  background: rgba(139,92,246,.08); border-color: rgba(167,139,250,.25); color: #a78bfa;
+}
+.bulk-btn.system:hover { background: rgba(139,92,246,.18); }
+.bulk-btn.user {
+  background: rgba(34,197,94,.06); border-color: rgba(34,197,94,.2); color: #4ade80;
+}
+.bulk-btn.user:hover { background: rgba(34,197,94,.16); }
+.bulk-deselect {
+  margin-left: auto; font-size: 12px; color: var(--muted);
+  background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+}
+.bulk-deselect:hover { color: var(--text); background: rgba(255,255,255,.05); }
+
+/* ── Row checkboxes ── */
+.qz-cb-cell {
+  width: 36px; padding: 10px 8px 10px 16px !important;
+}
+.qz-cb {
+  width: 15px; height: 15px; cursor: pointer;
+  accent-color: var(--accent);
+  border-radius: 4px;
+}
+tr.row-selected { background: rgba(59,130,246,.05); }
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   body { padding-left: 0; }
@@ -941,11 +997,21 @@ body { padding-left: 64px; }
       <span class="qz-word-count" id="word-count">0 words</span>
     </div>
 
+    <!-- Bulk action bar -->
+    <div class="bulk-bar" id="bulk-bar">
+      <span class="bulk-count" id="bulk-count">0 sélectionné(s)</span>
+      <button class="bulk-btn system" id="bulk-system" title="Marquer comme système">🤖 Système</button>
+      <button class="bulk-btn user" id="bulk-user" title="Marquer comme mes mots">👤 Mes mots</button>
+      <button class="bulk-btn danger" id="bulk-delete" title="Supprimer la sélection">🗑️ Supprimer</button>
+      <button class="bulk-deselect" id="bulk-deselect">✕ Désélectionner</button>
+    </div>
+
     <!-- Vocab table -->
     <div class="qz-table-wrap">
       <table class="qz-table" id="vocab-table" aria-label="Vocabulary list">
         <thead>
           <tr>
+            <th class="qz-cb-cell"><input type="checkbox" class="qz-cb" id="cb-select-all" title="Tout sélectionner"></th>
             <th>Source Word</th>
             <th>Translation</th>
             <th>Language</th>
@@ -1048,6 +1114,10 @@ body { padding-left: 64px; }
         <button class="btn-secondary" id="btn-skip">Skip</button>
       </div>
 
+      <div class="qz-action-row quiz-nav-row">
+        <button class="btn-secondary" id="btn-prev" style="display:none;">← Précédent</button>
+        <div style="flex:1"></div>
+      </div>
       <div class="qz-action-row" id="quiz-next-row" style="display:none;">
         <button class="btn-primary" id="btn-next">Next →</button>
       </div>
@@ -1242,6 +1312,64 @@ async function deleteWord(id) {
   showToast('Word deleted');
 }
 
+function updateBulkBar() {
+  const bar   = document.getElementById('bulk-bar');
+  const count = document.getElementById('bulk-count');
+  const n = selectedIds.size;
+  if (n === 0) {
+    bar.classList.remove('visible');
+  } else {
+    bar.classList.add('visible');
+    count.textContent = `${n} sélectionné${n > 1 ? 's' : ''}`;
+  }
+  // Sync select-all checkbox
+  const cbAll = document.getElementById('cb-select-all');
+  if (cbAll) {
+    const visible = getFilteredVocab();
+    cbAll.checked = visible.length > 0 && visible.every(w => selectedIds.has(w.id));
+    cbAll.indeterminate = !cbAll.checked && visible.some(w => selectedIds.has(w.id));
+  }
+}
+
+async function bulkDelete() {
+  const ids = [...selectedIds];
+  if (!ids.length) return;
+  // Only delete non-system words
+  const toDelete = vocab.filter(w => ids.includes(w.id) && !w.is_system);
+  const systemCount = ids.length - toDelete.length;
+  if (!toDelete.length) { showToast('Les mots système ne peuvent pas être supprimés'); return; }
+  const msg = systemCount > 0
+    ? `Supprimer ${toDelete.length} mot(s) ? (${systemCount} mot(s) système ignoré(s))`
+    : `Supprimer ${toDelete.length} mot(s) sélectionné(s) ?`;
+  if (!confirm(msg)) return;
+  const { error } = await window.sb.from('vocabulary')
+    .delete()
+    .in('id', toDelete.map(w => w.id))
+    .eq('user_id', currentUser.id);
+  if (error) { showToast('Erreur lors de la suppression'); return; }
+  selectedIds.clear();
+  await Promise.all([loadVocab(), loadProgress()]);
+  renderVocab();
+  renderProgress();
+  updateAvailNote();
+  showToast(`${toDelete.length} mot(s) supprimé(s)`);
+}
+
+async function bulkSetSource(isSystem) {
+  const ids = [...selectedIds];
+  if (!ids.length) return;
+  const label = isSystem ? 'système' : 'mes mots';
+  const { error } = await window.sb.from('vocabulary')
+    .update({ is_system: isSystem })
+    .in('id', ids)
+    .eq('user_id', currentUser.id);
+  if (error) { showToast('Erreur lors de la mise à jour'); return; }
+  selectedIds.clear();
+  await loadVocab();
+  renderVocab();
+  showToast(`${ids.length} mot(s) marqué(s) comme ${label}`);
+}
+
 async function loadProgress() {
   const { data, error } = await window.sb
     .from('quiz_progress')
@@ -1341,6 +1469,40 @@ document.getElementById('vocab-sort').addEventListener('change', e => {
   renderVocab();
 });
 
+// Select-all checkbox
+document.getElementById('cb-select-all').addEventListener('change', e => {
+  const visible = getFilteredVocab();
+  if (e.target.checked) {
+    visible.forEach(w => selectedIds.add(w.id));
+  } else {
+    visible.forEach(w => selectedIds.delete(w.id));
+  }
+  renderVocab();
+  updateBulkBar();
+});
+
+// Row checkboxes (delegated)
+document.getElementById('vocab-tbody').addEventListener('change', e => {
+  const cb = e.target.closest('.row-cb');
+  if (!cb) return;
+  const id = cb.dataset.id;
+  if (cb.checked) selectedIds.add(id);
+  else selectedIds.delete(id);
+  const row = cb.closest('tr');
+  if (row) row.classList.toggle('row-selected', cb.checked);
+  updateBulkBar();
+});
+
+// Bulk action buttons
+document.getElementById('bulk-delete').addEventListener('click', bulkDelete);
+document.getElementById('bulk-system').addEventListener('click', () => bulkSetSource(true));
+document.getElementById('bulk-user').addEventListener('click', () => bulkSetSource(false));
+document.getElementById('bulk-deselect').addEventListener('click', () => {
+  selectedIds.clear();
+  renderVocab();
+  updateBulkBar();
+});
+
 /* Add word form */
 document.getElementById('btn-add-word').addEventListener('click', submitAddWord);
 
@@ -1397,7 +1559,7 @@ function renderVocab() {
   document.getElementById('word-count').textContent = `${list.length} word${list.length !== 1 ? 's' : ''}`;
 
   if (!vocab.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="9"><div class="qz-empty">
       <div class="qz-empty-icon">📚</div>
       <h3>No words yet</h3>
       <p>Add your first vocabulary word using the form above.<br>Start with something simple!</p>
@@ -1406,7 +1568,7 @@ function renderVocab() {
   }
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="9"><div class="qz-empty">
       <div class="qz-empty-icon">🔍</div>
       <h3>No matches</h3>
       <p>Try adjusting your search or language filter.</p>
@@ -1415,21 +1577,25 @@ function renderVocab() {
   }
 
   tbody.innerHTML = list.map(word => renderVocabRow(word)).join('');
+  updateBulkBar();
   attachRowListeners();
 }
 
 function renderVocabRow(word) {
   const p   = progress[word.id];
   const rate = rateCell(p);
-  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl'; // NL→FR and nl-fr both get amber
+  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl';
   const ex  = word.example_sentence ? escHtml(word.example_sentence) : '—';
   const added = word.created_at ? timeAgo(word.created_at) : '—';
+  const checked = selectedIds.has(word.id) ? 'checked' : '';
+  const selClass = selectedIds.has(word.id) ? ' row-selected' : '';
 
   const srcBadge = word.is_system
     ? `<span class="source-badge source-system">🤖 système</span>`
     : `<span class="source-badge source-user">👤 moi</span>`;
 
-  return `<tr data-id="${word.id}">
+  return `<tr data-id="${word.id}"${selClass ? ` class="${selClass.trim()}"` : ''}>
+    <td class="qz-cb-cell"><input type="checkbox" class="qz-cb row-cb" data-id="${word.id}" ${checked} aria-label="Sélectionner"></td>
     <td class="source-word">${escHtml(word.source_word)}</td>
     <td>${escHtml(word.target_translation)}</td>
     <td><span class="lang-badge ${langClass}">${word.language_pair}</span></td>
@@ -1534,6 +1700,8 @@ function attachEditListeners() {
 /* ═══════════════════════════════════════════════════════════
    QUIZ VIEW
 ═══════════════════════════════════════════════════════════ */
+
+let selectedIds = new Set();
 
 let quizFilter  = 'all';
 let quizCount   = 10;
@@ -1697,6 +1865,10 @@ function showQuestion() {
   document.getElementById('btn-check').style.display  = 'inline-flex';
   document.getElementById('btn-skip').style.display   = 'inline-flex';
   ansInput.focus();
+
+  // Show/hide back button
+  const prevBtn = document.getElementById('btn-prev');
+  if (prevBtn) prevBtn.style.display = quizIndex > 0 ? 'inline-flex' : 'none';
 }
 
 document.getElementById('btn-check').addEventListener('click', checkAnswer);
@@ -1718,6 +1890,17 @@ document.getElementById('btn-skip').addEventListener('click', () => {
 });
 
 document.getElementById('btn-next').addEventListener('click', advanceQuiz);
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (quizIndex <= 0) return;
+  // If the current question was answered, remove it from sessionAnswers
+  if (document.getElementById('quiz-next-row').style.display !== 'none') {
+    // Already answered — pop last sessionAnswers entry if it matches current
+    if (sessionAnswers.length > 0) sessionAnswers.pop();
+  }
+  quizIndex--;
+  showQuestion();
+});
 
 function checkAnswer() {
   const item  = quizQueue[quizIndex];

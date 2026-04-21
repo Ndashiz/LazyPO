@@ -19,6 +19,7 @@ create table public.vocabulary (
   target_translation text not null,
   language_pair      text not null default 'EN→FR',
   example_sentence   text,
+  tips               text,
   is_system          boolean default false,
   created_at         timestamptz default now(),
   updated_at         timestamptz default now()
@@ -29,6 +30,7 @@ create policy "own_vocabulary" on public.vocabulary
 
 -- Migration (run once if table already exists):
 -- alter table public.vocabulary add column if not exists is_system boolean default false;
+-- alter table public.vocabulary add column if not exists tips text;
 
 -- Table 2: quiz_progress
 create table public.quiz_progress (
@@ -907,6 +909,30 @@ body { padding-left: 64px; }
 }
 tr.row-selected { background: rgba(59,130,246,.05); }
 
+/* ── Tip (indice) in quiz ── */
+.btn-tip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 100px;
+  background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.22);
+  color: #fbbf24; font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all .15s; margin-top: 14px;
+}
+.btn-tip:hover { background: rgba(251,191,36,.18); }
+.btn-tip.revealed { opacity: .5; cursor: default; pointer-events: none; }
+.qz-tip-text {
+  margin-top: 10px; padding: 10px 16px;
+  background: rgba(251,191,36,.06); border: 1px solid rgba(251,191,36,.18);
+  border-radius: 10px; font-size: 13.5px; color: #d4a017; line-height: 1.6;
+  animation: fadeUp .2s ease;
+}
+
+/* ── Tip column in vocab table ── */
+.tip-cell {
+  font-size: 12.5px; color: var(--muted); font-style: italic;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
 /* ── Excel import/export ── */
 .qz-excel-row {
   display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
@@ -982,6 +1008,9 @@ tr.row-selected { background: rgba(59,130,246,.05); }
         <input type="text" id="add-example" class="qz-input qz-input-example" placeholder="Example sentence (optional)" autocomplete="off">
         <button class="btn-primary" id="btn-add-word">Add Word</button>
       </div>
+      <div class="qz-add-row" style="margin-top:8px;">
+        <input type="text" id="add-tips" class="qz-input" placeholder="💡 Tips / mnémotechnique (optional)" autocomplete="off" style="flex:1;">
+      </div>
     </div>
 
     <!-- Import banner -->
@@ -1049,6 +1078,7 @@ tr.row-selected { background: rgba(59,130,246,.05); }
             <th>Translation</th>
             <th>Language</th>
             <th>Example</th>
+            <th>💡 Tips</th>
             <th>Success Rate</th>
             <th>Source</th>
             <th>Added</th>
@@ -1137,6 +1167,10 @@ tr.row-selected { background: rgba(59,130,246,.05); }
         <div id="quiz-lang-badge" style="margin-bottom:14px;"></div>
         <div class="qz-question-word" id="quiz-question">—</div>
         <div class="qz-question-example" id="quiz-example"></div>
+        <div id="quiz-tip-wrap" style="display:none;">
+          <button class="btn-tip" id="btn-tip">💡 Indice</button>
+          <div class="qz-tip-text" id="quiz-tip-text" style="display:none;"></div>
+        </div>
       </div>
 
       <div class="qz-feedback" id="quiz-feedback"></div>
@@ -1360,6 +1394,7 @@ function exportToExcel() {
       target_translation: w.target_translation,
       language_pair:      w.language_pair,
       example_sentence:   w.example_sentence || '',
+      tips:               w.tips || '',
       is_system:          w.is_system ? 1 : 0,
       created_at:         w.created_at || '',
       correct:            p.correct     ?? 0,
@@ -1410,6 +1445,7 @@ async function importFromExcel(file) {
         target_translation: String(r.target_translation).trim(),
         language_pair:      String(r.language_pair || 'EN→FR').trim(),
         example_sentence:   r.example_sentence ? String(r.example_sentence).trim() : null,
+        tips:               r.tips ? String(r.tips).trim() : null,
         is_system:          r.is_system == 1 || r.is_system === true || r.is_system === 'true',
       }));
 
@@ -1671,7 +1707,7 @@ document.getElementById('bulk-deselect').addEventListener('click', () => {
 /* Add word form */
 document.getElementById('btn-add-word').addEventListener('click', submitAddWord);
 
-['add-source','add-target','add-example'].forEach(id => {
+['add-source','add-target','add-example','add-tips'].forEach(id => {
   document.getElementById(id).addEventListener('keydown', e => {
     if (e.key === 'Enter') submitAddWord();
   });
@@ -1681,11 +1717,13 @@ function submitAddWord() {
   const source  = document.getElementById('add-source').value.trim();
   const target  = document.getElementById('add-target').value.trim();
   const example = document.getElementById('add-example').value.trim();
+  const tips    = document.getElementById('add-tips').value.trim();
   if (!source || !target) { showToast('Please fill in source word and translation'); return; }
-  addWord({ source_word: source, target_translation: target, language_pair: selectedLang, example_sentence: example || null });
+  addWord({ source_word: source, target_translation: target, language_pair: selectedLang, example_sentence: example || null, tips: tips || null });
   document.getElementById('add-source').value  = '';
   document.getElementById('add-target').value  = '';
   document.getElementById('add-example').value = '';
+  document.getElementById('add-tips').value    = '';
   document.getElementById('add-source').focus();
 }
 
@@ -1724,7 +1762,7 @@ function renderVocab() {
   document.getElementById('word-count').textContent = `${list.length} word${list.length !== 1 ? 's' : ''}`;
 
   if (!vocab.length) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="10"><div class="qz-empty">
       <div class="qz-empty-icon">📚</div>
       <h3>No words yet</h3>
       <p>Add your first vocabulary word using the form above.<br>Start with something simple!</p>
@@ -1733,7 +1771,7 @@ function renderVocab() {
   }
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="10"><div class="qz-empty">
       <div class="qz-empty-icon">🔍</div>
       <h3>No matches</h3>
       <p>Try adjusting your search or language filter.</p>
@@ -1759,12 +1797,15 @@ function renderVocabRow(word) {
     ? `<span class="source-badge source-system">🤖 système</span>`
     : `<span class="source-badge source-user">👤 moi</span>`;
 
+  const tipDisplay = word.tips ? `<span title="${escHtml(word.tips)}">${escHtml(word.tips.length > 30 ? word.tips.slice(0,30) + '…' : word.tips)}</span>` : '<span style="opacity:.3">—</span>';
+
   return `<tr data-id="${word.id}"${selClass ? ` class="${selClass.trim()}"` : ''}>
     <td class="qz-cb-cell"><input type="checkbox" class="qz-cb row-cb" data-id="${word.id}" ${checked} aria-label="Sélectionner"></td>
     <td class="source-word">${escHtml(word.source_word)}</td>
     <td>${escHtml(word.target_translation)}</td>
     <td><span class="lang-badge ${langClass}">${word.language_pair}</span></td>
     <td class="example" title="${escHtml(word.example_sentence || '')}">${ex}</td>
+    <td class="tip-cell">${tipDisplay}</td>
     <td>${rate}</td>
     <td>${srcBadge}</td>
     <td class="ts-cell" title="${word.created_at ? new Date(word.created_at).toLocaleString() : ''}">${added}</td>
@@ -1776,8 +1817,9 @@ function renderVocabRow(word) {
 }
 
 function renderEditRow(word) {
-  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl'; // NL→FR and nl-fr both get amber
+  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl';
   return `<tr data-id="${word.id}" class="editing-row">
+    <td></td>
     <td><input class="edit-input" id="ei-source" value="${escHtml(word.source_word)}"></td>
     <td><input class="edit-input" id="ei-target" value="${escHtml(word.target_translation)}"></td>
     <td>
@@ -1787,7 +1829,8 @@ function renderEditRow(word) {
       </div>
     </td>
     <td><input class="edit-input" id="ei-example" value="${escHtml(word.example_sentence||'')}"></td>
-    <td>—</td>
+    <td><input class="edit-input" id="ei-tips" value="${escHtml(word.tips||'')}" placeholder="💡 Tips…"></td>
+    <td>—</td><td>—</td>
     <td class="ts-cell">${word.created_at ? timeAgo(word.created_at) : '—'}</td>
     <td>
       <button class="btn-primary btn-save-edit" data-id="${word.id}" style="padding:6px 12px;font-size:13px;">Save</button>
@@ -1842,9 +1885,10 @@ function attachEditListeners() {
     const source = document.getElementById('ei-source')?.value.trim();
     const target = document.getElementById('ei-target')?.value.trim();
     const example= document.getElementById('ei-example')?.value.trim();
+    const tips   = document.getElementById('ei-tips')?.value.trim();
     const lang   = document.querySelector('.editing-row .qz-lang-btn.active')?.dataset.lang || 'EN→FR';
     if (!source || !target) { showToast('Source and translation are required'); return; }
-    await updateWord(id, { source_word: source, target_translation: target, language_pair: lang, example_sentence: example || null });
+    await updateWord(id, { source_word: source, target_translation: target, language_pair: lang, example_sentence: example || null, tips: tips || null });
     editingId = null;
   });
 
@@ -2020,6 +2064,20 @@ function showQuestion() {
       ? item.word.example_sentence
       : '';
 
+  // Tip / indice
+  const tipWrap = document.getElementById('quiz-tip-wrap');
+  const tipText = document.getElementById('quiz-tip-text');
+  const tipBtn  = document.getElementById('btn-tip');
+  if (item.word.tips) {
+    tipWrap.style.display = 'block';
+    tipText.style.display = 'none';
+    tipText.textContent   = item.word.tips;
+    tipBtn.className      = 'btn-tip';
+    tipBtn.textContent    = '💡 Indice';
+  } else {
+    tipWrap.style.display = 'none';
+  }
+
   const ansInput = document.getElementById('quiz-answer-input');
   ansInput.value = '';
   ansInput.className = 'qz-answer-input';
@@ -2055,6 +2113,14 @@ document.getElementById('btn-skip').addEventListener('click', () => {
 });
 
 document.getElementById('btn-next').addEventListener('click', advanceQuiz);
+
+document.getElementById('btn-tip').addEventListener('click', () => {
+  const tipText = document.getElementById('quiz-tip-text');
+  const tipBtn  = document.getElementById('btn-tip');
+  tipText.style.display = 'block';
+  tipBtn.classList.add('revealed');
+  tipBtn.textContent = '💡 Indice révélé';
+});
 
 document.getElementById('btn-prev').addEventListener('click', () => {
   if (quizIndex <= 0) return;
@@ -2257,7 +2323,7 @@ function renderProgress() {
   const tbody = document.getElementById('progress-tbody');
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="10"><div class="qz-empty">
       <div class="qz-empty-icon">📊</div>
       <h3>No data yet</h3>
       <p>Start a quiz session to see progress tracked here.</p>

@@ -774,6 +774,186 @@ body { padding-left: 64px; }
 }
 
 /* ══════════════════════════════════════
+   REVIEW SCREEN
+══════════════════════════════════════ */
+.qz-review-wrap {
+  max-width: 640px; margin: 0 auto;
+}
+.review-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 28px;
+}
+.review-title {
+  font-size: 20px; font-weight: 700; color: var(--text);
+}
+.review-counter {
+  font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted);
+  background: var(--surface2); padding: 4px 12px; border-radius: 20px;
+  border: 1px solid var(--border2);
+}
+.review-prog-bar {
+  height: 3px; background: var(--surface2); border-radius: 2px; margin-bottom: 28px;
+}
+.review-prog-bar-fill {
+  height: 100%; background: var(--danger); border-radius: 2px; transition: width .3s;
+}
+.review-asked-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin-bottom: 10px;
+}
+.review-word-box {
+  background: var(--surface2); border: 1px solid var(--border2); border-radius: 14px;
+  padding: 24px; font-size: 30px; font-weight: 700; color: var(--text);
+  text-align: center; margin-bottom: 24px; letter-spacing: -.5px;
+}
+.review-compare {
+  display: grid; grid-template-columns: 1fr 40px 1fr; gap: 12px;
+  align-items: center; margin-bottom: 28px;
+}
+.review-col-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+  margin-bottom: 8px;
+}
+.review-col-label.wrong { color: var(--danger); }
+.review-col-label.right { color: var(--success); }
+.review-arrow {
+  font-size: 20px; color: var(--muted); text-align: center; padding-top: 26px;
+}
+.review-answer-box {
+  padding: 16px; border-radius: 12px; font-size: 18px; font-weight: 600;
+  text-align: center; border: 2px solid; min-height: 58px;
+  display: flex; align-items: center; justify-content: center;
+}
+.review-answer-box.wrong {
+  background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.35);
+  color: #fca5a5; text-decoration: line-through;
+  text-decoration-color: rgba(239,68,68,.5);
+}
+.review-answer-box.right {
+  background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.35);
+  color: #86efac;
+}
+.review-answer-box.skipped {
+  background: rgba(107,107,107,.08); border-color: rgba(107,107,107,.3);
+  color: var(--muted); font-style: italic; font-size: 14px; text-decoration: none;
+}
+.review-actions {
+  display: flex; justify-content: space-between; align-items: center;
+}
+@media (max-width: 520px) {
+  .review-compare { grid-template-columns: 1fr; }
+  .review-arrow { display: none; }
+  .review-word-box { font-size: 22px; padding: 18px; }
+}
+
+/* ══════════════════════════════════════
+   GAMIFIED STATS
+══════════════════════════════════════ */
+.qz-gamestats-section { margin-bottom: 28px; }
+.qz-gamestats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 14px;
+}
+.qz-gamestat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px 16px; text-align: center;
+  transition: border-color .3s, box-shadow .3s, background .3s;
+  cursor: default;
+}
+.gs-icon { font-size: 30px; line-height: 1; margin-bottom: 8px; }
+.gs-value {
+  font-size: 32px; font-weight: 700; font-family: 'DM Mono', monospace;
+  color: var(--text); line-height: 1.1; margin-bottom: 4px;
+  transition: color .3s;
+}
+.gs-label {
+  font-size: 10px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted);
+}
+.gs-sublabel {
+  font-size: 10px; color: var(--muted); margin-top: 2px;
+  font-family: 'DM Mono', monospace;
+}
+
+/* Streak states */
+#gs-streak-card.streak-on {
+  border-color: rgba(245,158,11,.4);
+  background: rgba(245,158,11,.06);
+}
+#gs-streak-card.streak-on .gs-value { color: #f59e0b; }
+#gs-streak-card.streak-hot {
+  border-color: rgba(245,158,11,.6);
+  background: rgba(245,158,11,.09);
+  box-shadow: 0 0 20px rgba(245,158,11,.15);
+}
+#gs-streak-card.streak-hot .gs-value { color: #fbbf24; }
+#gs-streak-card.streak-epic {
+  border-color: rgba(245,158,11,.8);
+  background: rgba(245,158,11,.12);
+  animation: streak-pulse 2s ease infinite;
+}
+#gs-streak-card.streak-epic .gs-value { color: #fde68a; }
+#gs-streak-card.streak-epic .gs-icon { animation: flame-shake .6s ease-in-out infinite alternate; }
+@keyframes streak-pulse {
+  0%,100% { box-shadow: 0 0 14px rgba(245,158,11,.2); }
+  50%      { box-shadow: 0 0 36px rgba(245,158,11,.45); }
+}
+@keyframes flame-shake {
+  0%   { transform: scale(1) rotate(-6deg); }
+  100% { transform: scale(1.15) rotate(6deg); }
+}
+
+/* Activity heatmap */
+.qz-heatmap-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px 20px 14px;
+}
+.hm-title {
+  font-size: 11px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
+}
+.hm-grid {
+  display: grid; grid-template-columns: repeat(28, 1fr); gap: 4px;
+}
+.hm-cell {
+  aspect-ratio: 1; border-radius: 3px; transition: transform .1s;
+  cursor: default;
+}
+.hm-cell:hover { transform: scale(1.5); z-index: 2; position: relative; }
+.hm-cell.lv0 { background: var(--surface2); }
+.hm-cell.lv1 { background: rgba(59,130,246,.3); }
+.hm-cell.lv2 { background: rgba(59,130,246,.65); }
+.hm-cell.lv3 { background: rgba(59,130,246,.95); }
+.hm-cell.today { outline: 2px solid rgba(96,165,250,.8); outline-offset: 1px; }
+.hm-legend {
+  display: flex; align-items: center; gap: 5px;
+  margin-top: 10px; font-size: 10px; color: var(--muted);
+  justify-content: flex-end;
+}
+.hm-legend .hm-cell { width: 11px; height: 11px; }
+
+/* Session stats footer in summary */
+.qz-session-footer {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px 20px; margin-bottom: 20px;
+}
+.qz-session-footer-row {
+  display: flex; justify-content: center; gap: 32px; flex-wrap: wrap;
+}
+.qz-session-footer-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.qz-session-footer-item .sf-val {
+  font-size: 22px; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--text);
+}
+.qz-session-footer-item .sf-lbl {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted);
+}
+.sf-streak { color: #f59e0b !important; }
+
+/* ══════════════════════════════════════
    PROGRESS VIEW
 ══════════════════════════════════════ */
 
@@ -1205,6 +1385,36 @@ tr.row-selected { background: rgba(59,130,246,.05); }
       </div>
     </div>
 
+    <!-- Error Review screen (hidden by default) -->
+    <div id="quiz-review" class="qz-card" style="display:none;">
+      <div class="qz-review-wrap">
+        <div class="review-header">
+          <span class="review-title">🔍 Error Review</span>
+          <span class="review-counter" id="review-counter">1 / 1</span>
+        </div>
+        <div class="review-prog-bar">
+          <div class="review-prog-bar-fill" id="review-prog-fill" style="width:0%"></div>
+        </div>
+        <div class="review-asked-label">You were asked to translate:</div>
+        <div class="review-word-box" id="review-asked">—</div>
+        <div class="review-compare">
+          <div>
+            <div class="review-col-label wrong">❌ Your answer</div>
+            <div class="review-answer-box wrong" id="review-given">—</div>
+          </div>
+          <div class="review-arrow">→</div>
+          <div>
+            <div class="review-col-label right">✅ Correct answer</div>
+            <div class="review-answer-box right" id="review-correct">—</div>
+          </div>
+        </div>
+        <div class="review-actions">
+          <button class="btn-secondary" id="review-btn-prev">← Previous</button>
+          <button class="btn-primary"   id="review-btn-next">Next →</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Session summary (hidden by default) -->
     <div id="quiz-summary" class="qz-summary" style="display:none;">
       <div class="qz-summary-card">
@@ -1227,6 +1437,24 @@ tr.row-selected { background: rgba(59,130,246,.05); }
         </div>
       </div>
 
+      <!-- Session stats footer (streak, time, total) -->
+      <div class="qz-session-footer" id="summary-footer">
+        <div class="qz-session-footer-row">
+          <div class="qz-session-footer-item">
+            <span class="sf-val sf-streak" id="sf-streak">🔥 0</span>
+            <span class="sf-lbl">Day streak</span>
+          </div>
+          <div class="qz-session-footer-item">
+            <span class="sf-val" id="sf-time">0m</span>
+            <span class="sf-lbl">Session time</span>
+          </div>
+          <div class="qz-session-footer-item">
+            <span class="sf-val" id="sf-total">0</span>
+            <span class="sf-lbl">Total answers ever</span>
+          </div>
+        </div>
+      </div>
+
       <div id="missed-section" class="qz-missed-list" style="display:none;">
         <div class="qz-missed-header">Words to review</div>
         <div id="missed-list"></div>
@@ -1243,6 +1471,50 @@ tr.row-selected { background: rgba(59,130,246,.05); }
        VIEW: PROGRESS
   ════════════════════════════════ -->
   <section class="qz-view" id="view-progress" role="tabpanel">
+
+    <!-- ── Gamified stats ── -->
+    <div class="qz-gamestats-section">
+      <div class="qz-gamestats-row">
+        <div class="qz-gamestat-card" id="gs-streak-card">
+          <div class="gs-icon">🔥</div>
+          <div class="gs-value" id="gs-streak">0</div>
+          <div class="gs-label">Day Streak</div>
+          <div class="gs-sublabel" id="gs-streak-sub">Start today!</div>
+        </div>
+        <div class="qz-gamestat-card">
+          <div class="gs-icon">📅</div>
+          <div class="gs-value" id="gs-sessions-today">0</div>
+          <div class="gs-label">Today</div>
+          <div class="gs-sublabel" id="gs-sessions-week">0 this week</div>
+        </div>
+        <div class="qz-gamestat-card">
+          <div class="gs-icon">✅</div>
+          <div class="gs-value" id="gs-total-answers">0</div>
+          <div class="gs-label">Total Answers</div>
+          <div class="gs-sublabel" id="gs-answers-today">0 today</div>
+        </div>
+        <div class="qz-gamestat-card">
+          <div class="gs-icon">⏱️</div>
+          <div class="gs-value" id="gs-time">0m</div>
+          <div class="gs-label">Time Played</div>
+          <div class="gs-sublabel" id="gs-time-today">0m today</div>
+        </div>
+      </div>
+
+      <!-- Activity heatmap -->
+      <div class="qz-heatmap-wrap">
+        <div class="hm-title">Activity — last 28 days</div>
+        <div class="hm-grid" id="hm-grid"></div>
+        <div class="hm-legend">
+          <span>Less</span>
+          <div class="hm-cell lv0"></div>
+          <div class="hm-cell lv1"></div>
+          <div class="hm-cell lv2"></div>
+          <div class="hm-cell lv3"></div>
+          <span>More</span>
+        </div>
+      </div>
+    </div>
 
     <!-- Stats cards -->
     <div class="qz-stats-row" id="stats-row">
@@ -1345,6 +1617,11 @@ let quizIndex    = 0;
 let quizMode     = 'auto';      // 'auto' | 'forward' | 'reverse'
 let sessionAnswers = [];        // { word, correct, skipped, givenAnswer, direction }
 let sessionOptions = { filter: 'all', count: 10 };
+let sessionStartTime = null;   // Date.now() at quiz start
+
+/* ── Review state ── */
+let reviewQueue = [];
+let reviewIndex = 0;
 
 /* ── Init ── */
 // Use IIFE instead of DOMContentLoaded so it works both on direct load
@@ -2084,6 +2361,7 @@ function shuffle(arr) {
 /* Start quiz */
 document.getElementById('btn-start-quiz').addEventListener('click', () => {
   sessionAnswers = [];
+  sessionStartTime = Date.now();
   quizQueue  = buildQuizQueue(quizFilter, quizCount, quizMode);
   quizIndex  = 0;
   document.getElementById('quiz-setup').style.display   = 'none';
@@ -2241,11 +2519,211 @@ function checkAnswer() {
 function advanceQuiz() {
   quizIndex++;
   if (quizIndex >= quizQueue.length) {
-    showSummary();
+    endSession();
   } else {
     showQuestion();
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SESSION STATS — localStorage helpers
+═══════════════════════════════════════════════════════════ */
+
+function _today() { return new Date().toISOString().slice(0, 10); }
+
+function getQuizLog() {
+  try { return JSON.parse(localStorage.getItem('lazypo_quiz_log') || '[]'); }
+  catch { return []; }
+}
+
+function saveQuizSession(words, correct, durationSec) {
+  const log = getQuizLog();
+  log.push({ date: _today(), words, correct, durationSec });
+  // Keep last 365 entries
+  if (log.length > 365) log.splice(0, log.length - 365);
+  localStorage.setItem('lazypo_quiz_log', JSON.stringify(log));
+}
+
+function computeStreak() {
+  const log = getQuizLog();
+  const uniqueDays = [...new Set(log.map(s => s.date))].sort().reverse();
+  if (!uniqueDays.length) return 0;
+
+  const today     = _today();
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (uniqueDays[0] !== today && uniqueDays[0] !== yesterday) return 0;
+
+  let streak = 0;
+  for (let i = 0; i < uniqueDays.length; i++) {
+    const expected = new Date(
+      new Date(uniqueDays[0]).getTime() - i * 86400000
+    ).toISOString().slice(0, 10);
+    if (uniqueDays[i] === expected) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function computeGameStats() {
+  const log    = getQuizLog();
+  const today  = _today();
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+
+  const todaySessions = log.filter(s => s.date === today);
+  const weekSessions  = log.filter(s => s.date >= weekAgo);
+
+  const totalTime     = log.reduce((s, e) => s + (e.durationSec || 0), 0);
+  const todayTime     = todaySessions.reduce((s, e) => s + (e.durationSec || 0), 0);
+  const todayWords    = todaySessions.reduce((s, e) => s + (e.words || 0), 0);
+
+  // Total answers from quiz_progress (cross-device, accurate)
+  const totalAnswers = Object.values(progress).reduce((s, p) => s + (p.attempts || 0), 0);
+
+  return {
+    streak: computeStreak(),
+    sessionsToday: todaySessions.length,
+    sessionsWeek: weekSessions.length,
+    totalTime,
+    todayTime,
+    todayWords,
+    totalAnswers,
+  };
+}
+
+function fmtTime(sec) {
+  if (!sec) return '0m';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${Math.max(1, m)}m`;
+}
+
+function renderGameStats() {
+  const s = computeGameStats();
+  const streak = s.streak;
+
+  // Streak card
+  document.getElementById('gs-streak').textContent = streak;
+  document.getElementById('gs-streak-sub').textContent =
+    streak === 0 ? 'Start today!'
+    : streak === 1 ? 'Keep it going!'
+    : streak < 7  ? `${streak} days on fire! 🔥`
+    : `🏆 ${streak} day legend!`;
+
+  const card = document.getElementById('gs-streak-card');
+  card.classList.remove('streak-on','streak-hot','streak-epic');
+  if (streak >= 7) card.classList.add('streak-epic');
+  else if (streak >= 3) card.classList.add('streak-hot');
+  else if (streak >= 1) card.classList.add('streak-on');
+
+  // Sessions card
+  document.getElementById('gs-sessions-today').textContent = s.sessionsToday;
+  document.getElementById('gs-sessions-week').textContent  = `${s.sessionsWeek} this week`;
+
+  // Answers card
+  document.getElementById('gs-total-answers').textContent = s.totalAnswers.toLocaleString('fr-FR');
+  document.getElementById('gs-answers-today').textContent = `${s.todayWords} today`;
+
+  // Time card
+  document.getElementById('gs-time').textContent      = fmtTime(s.totalTime);
+  document.getElementById('gs-time-today').textContent = `${fmtTime(s.todayTime)} today`;
+
+  renderHeatmap();
+}
+
+function renderHeatmap() {
+  const grid = document.getElementById('hm-grid');
+  if (!grid) return;
+  const log = getQuizLog();
+  const dayMap = {};
+  log.forEach(s => { dayMap[s.date] = (dayMap[s.date] || 0) + s.words; });
+
+  const today = new Date();
+  const cells = [];
+  for (let i = 27; i >= 0; i--) {
+    const d   = new Date(today.getTime() - i * 86400000);
+    const key = d.toISOString().slice(0, 10);
+    const w   = dayMap[key] || 0;
+    const lv  = w === 0 ? 0 : w <= 5 ? 1 : w <= 15 ? 2 : 3;
+    const cls = `hm-cell lv${lv}${i === 0 ? ' today' : ''}`;
+    const label = d.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' });
+    cells.push(`<div class="${cls}" title="${label}: ${w} mot${w !== 1 ? 's' : ''}"></div>`);
+  }
+  grid.innerHTML = cells.join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   END SESSION — save stats + decide: review or summary
+═══════════════════════════════════════════════════════════ */
+
+function endSession() {
+  const durationSec = sessionStartTime
+    ? Math.round((Date.now() - sessionStartTime) / 1000)
+    : 0;
+  const total   = sessionAnswers.length;
+  const correct = sessionAnswers.filter(a => a.correct).length;
+  saveQuizSession(total, correct, durationSec);
+
+  const wrong = sessionAnswers.filter(a => !a.correct && !a.skipped);
+  if (wrong.length > 0) {
+    // Show review first
+    reviewQueue = wrong;
+    reviewIndex = 0;
+    document.getElementById('quiz-active').style.display  = 'none';
+    document.getElementById('quiz-review').style.display  = 'block';
+    document.getElementById('quiz-summary').style.display = 'none';
+    showReviewItem();
+  } else {
+    showSummary();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   REVIEW FLOW
+═══════════════════════════════════════════════════════════ */
+
+function showReviewItem() {
+  const a     = reviewQueue[reviewIndex];
+  const total = reviewQueue.length;
+  const pct   = Math.round(((reviewIndex + 1) / total) * 100);
+
+  document.getElementById('review-counter').textContent      = `${reviewIndex + 1} / ${total}`;
+  document.getElementById('review-prog-fill').style.width    = pct + '%';
+
+  const asked   = a.direction === 'forward' ? a.word.source_word        : a.word.target_translation;
+  const correct = a.direction === 'forward' ? a.word.target_translation : a.word.source_word;
+
+  document.getElementById('review-asked').textContent   = asked;
+  document.getElementById('review-correct').textContent = correct;
+
+  const givenEl = document.getElementById('review-given');
+  if (!a.givenAnswer) {
+    givenEl.textContent = '(skipped)';
+    givenEl.className   = 'review-answer-box skipped';
+  } else {
+    givenEl.textContent = a.givenAnswer;
+    givenEl.className   = 'review-answer-box wrong';
+  }
+
+  const prevBtn = document.getElementById('review-btn-prev');
+  prevBtn.style.visibility = reviewIndex > 0 ? 'visible' : 'hidden';
+  document.getElementById('review-btn-next').textContent =
+    reviewIndex === total - 1 ? 'See Results →' : 'Next →';
+}
+
+document.getElementById('review-btn-next').addEventListener('click', () => {
+  reviewIndex++;
+  if (reviewIndex >= reviewQueue.length) {
+    document.getElementById('quiz-review').style.display = 'none';
+    showSummary();
+  } else {
+    showReviewItem();
+  }
+});
+
+document.getElementById('review-btn-prev').addEventListener('click', () => {
+  if (reviewIndex > 0) { reviewIndex--; showReviewItem(); }
+});
 
 function showSummary() {
   document.getElementById('quiz-active').style.display  = 'none';
@@ -2290,18 +2768,29 @@ function showSummary() {
     missedSec.style.display = 'none';
   }
 
+  // Session footer stats
+  const sfStreak = computeStreak();
+  const sfDur    = sessionStartTime ? Math.round((Date.now() - sessionStartTime) / 1000) : 0;
+  const sfTotal  = Object.values(progress).reduce((s, p) => s + (p.attempts || 0), 0);
+  document.getElementById('sf-streak').textContent = `🔥 ${sfStreak}`;
+  document.getElementById('sf-time').textContent   = fmtTime(sfDur);
+  document.getElementById('sf-total').textContent  = sfTotal.toLocaleString('fr-FR');
+  if (sfStreak === 0) document.getElementById('sf-streak').style.color = 'var(--muted)';
+
   // refresh progress data for rendering
-  loadProgress().then(() => renderProgress());
+  loadProgress().then(() => { renderProgress(); renderGameStats(); });
 }
 
 document.getElementById('btn-try-again').addEventListener('click', () => {
   document.getElementById('quiz-summary').style.display = 'none';
+  document.getElementById('quiz-review').style.display  = 'none';
   document.getElementById('quiz-setup').style.display   = 'block';
   updateAvailNote();
 });
 
 document.getElementById('btn-back-vocab').addEventListener('click', () => {
   document.getElementById('quiz-summary').style.display = 'none';
+  document.getElementById('quiz-review').style.display  = 'none';
   document.getElementById('quiz-setup').style.display   = 'block';
   switchTab('vocab');
 });
@@ -2337,6 +2826,8 @@ function getWordStatus(wordId) {
 }
 
 function renderProgress() {
+  renderGameStats();  // always refresh gamified stats when progress view renders
+
   // Stats
   const total    = vocab.length;
   const mastered = vocab.filter(w => getWordStatus(w.id) === 'mastered').length;

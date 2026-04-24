@@ -2401,18 +2401,18 @@ function showQuestion() {
       ? item.word.example_sentence
       : '';
 
-  // Tip / indice
+  // Tip / indice — toujours affiché par défaut quand il existe
   const tipWrap = document.getElementById('quiz-tip-wrap');
   const tipText = document.getElementById('quiz-tip-text');
   const tipBtn  = document.getElementById('btn-tip');
   if (item.word.tips) {
     tipWrap.style.display = 'block';
-    tipText.style.display = 'none';
+    tipText.style.display = 'block';   // visible directement
     tipText.textContent   = item.word.tips;
-    tipBtn.className      = 'btn-tip';
-    tipBtn.textContent    = '💡 Indice';
+    tipBtn.style.display  = 'none';    // bouton "révéler" inutile
   } else {
     tipWrap.style.display = 'none';
+    tipBtn.style.display  = 'none';
   }
 
   const ansInput = document.getElementById('quiz-answer-input');

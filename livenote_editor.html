@@ -351,16 +351,14 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
   background:var(--surface);border:1px solid var(--border2);border-radius:10px;
   padding:10px 12px;animation:sld .2s ease;transition:opacity .5s;
 }
-.file-card.fc-expired{opacity:0;pointer-events:none}
 .fc-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
 .fc-ico{font-size:18px;flex-shrink:0}
 .fc-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fc-size{font-size:11px;color:var(--muted);flex-shrink:0}
-.fc-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:7px}
-.fc-fill{height:100%;background:var(--accent);border-radius:2px}
 .fc-bot{display:flex;align-items:center;justify-content:space-between}
-.fc-t{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
-.fc-t.hot{color:#f87171}
+.fc-t{font-size:11px;color:var(--muted)}
+.btn-fc-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:4px;line-height:1;}
+.btn-fc-remove:hover{background:rgba(239,68,68,.15);color:#f87171;}
 .btn-dl{
   padding:4px 10px;border-radius:5px;
   background:rgba(59,130,246,.12);border:1px solid rgba(96,165,250,.2);
@@ -556,7 +554,6 @@ let cursorBcTimer     = null; // throttle cursor broadcast
 
 /* File sharing */
 const FILE_BUCKET = 'livenote-temp';
-const FILE_TTL_MS = 30000;
 
 /* ── Helpers ── */
 function toast(msg, ms = 2500) {
@@ -969,7 +966,8 @@ function fmtSize(b) {
   return (b/1048576).toFixed(1) + ' MB';
 }
 
-function showFileCard(info) {
+function showFileCard(info, canRemove = false) {
+  if (document.querySelector(`.file-card[data-path="${CSS.escape(info.path)}"]`)) return; // already shown
   const panel = document.getElementById('filePanel');
   const card  = document.createElement('div');
   card.className = 'file-card';
@@ -980,32 +978,17 @@ function showFileCard(info) {
       <span class="fc-name" title="${esc(info.name)}">${esc(info.name)}</span>
       <span class="fc-size">${fmtSize(info.size)}</span>
     </div>
-    <div class="fc-bar"><div class="fc-fill" style="width:100%"></div></div>
     <div class="fc-bot">
-      <span class="fc-t">⏳ <span class="fc-cd">30s</span></span>
-      <a class="btn-dl" href="${esc(info.url)}" target="_blank" download="${esc(info.name)}">⬇ Download</a>
+      <span class="fc-t">📎 Partagé</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a class="btn-dl" href="${esc(info.url)}" target="_blank" download="${esc(info.name)}">⬇ Télécharger</a>
+        ${canRemove ? `<button class="btn-fc-remove" title="Supprimer">✕</button>` : ''}
+      </div>
     </div>`;
+  if (canRemove) {
+    card.querySelector('.btn-fc-remove').addEventListener('click', () => removeFile(info.path));
+  }
   panel.prepend(card);
-  // Animate bar from 100% → 0% over TTL
-  const fill = card.querySelector('.fc-fill');
-  const cdEl = card.querySelector('.fc-cd');
-  const tEl  = card.querySelector('.fc-t');
-  const rem  = Math.max(0, info.expiresAt - Date.now());
-  requestAnimationFrame(() => {
-    fill.style.transition = `width ${rem}ms linear`;
-    fill.style.width = '0%';
-  });
-  const endAt = info.expiresAt;
-  const tick = setInterval(() => {
-    const left = Math.max(0, endAt - Date.now());
-    cdEl.textContent = Math.ceil(left / 1000) + 's';
-    tEl.classList.toggle('hot', left < 10000);
-    if (left <= 0) {
-      clearInterval(tick);
-      card.classList.add('fc-expired');
-      setTimeout(() => card.remove(), 500);
-    }
-  }, 500);
 }
 
 /* ═══════════════════════════════════════════════
@@ -1083,21 +1066,35 @@ function disableDropZone() {
 }
 
 async function uploadTempFile(file) {
-  if (dropZoneDisabled) return;
-  if (file.size > 50 * 1024 * 1024) { toast('File too large — max 50 MB'); return; }
-  toast(`Uploading ${file.name}…`);
+  if (file.size > 50 * 1024 * 1024) { toast('Fichier trop lourd — max 50 MB'); return; }
+  toast(`Upload de ${file.name}…`);
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
   const path = `${docShortId}/${Date.now()}-${safeName}`;
   const { error } = await sb.storage.from(FILE_BUCKET).upload(path, file, { upsert: true });
-  if (error) { toast('Upload failed: ' + error.message); return; }
+  if (error) { toast('Upload échoué : ' + error.message); return; }
   const { data: { publicUrl } } = sb.storage.from(FILE_BUCKET).getPublicUrl(path);
-  const info = { name: file.name, size: file.size, type: file.type, url: publicUrl, path, expiresAt: Date.now() + FILE_TTL_MS };
-  showFileCard(info);
+  const info = { name: file.name, size: file.size, type: file.type, url: publicUrl, path };
+  // Persist to DB so late joiners see the file
+  const { data: doc } = await sb.from('livenote_docs').select('shared_files').eq('short_id', docShortId).single();
+  const existing = Array.isArray(doc?.shared_files) ? doc.shared_files : [];
+  await sb.from('livenote_docs').update({ shared_files: [...existing, info] }).eq('short_id', docShortId);
+  // Show locally (with remove button) + broadcast to connected peers
+  showFileCard(info, true);
   channel?.send({ type: 'broadcast', event: 'file-share', payload: { uid: myUserId, ...info } });
-  setTimeout(() => sb.storage.from(FILE_BUCKET).remove([path]).catch(()=>{}), FILE_TTL_MS);
-  toast(`${file.name} shared — 30s to download`);
-  // One file per session — disable drop zone immediately after upload
-  disableDropZone();
+  toast(`${file.name} partagé ✓`);
+}
+
+async function removeFile(path) {
+  // Remove from storage
+  sb.storage.from(FILE_BUCKET).remove([path]).catch(() => {});
+  // Remove from DB
+  const { data: doc } = await sb.from('livenote_docs').select('shared_files').eq('short_id', docShortId).single();
+  const updated = (doc?.shared_files || []).filter(f => f.path !== path);
+  await sb.from('livenote_docs').update({ shared_files: updated }).eq('short_id', docShortId);
+  // Remove card locally
+  document.querySelector(`.file-card[data-path="${CSS.escape(path)}"]`)?.remove();
+  // Broadcast removal to peers
+  channel?.send({ type: 'broadcast', event: 'file-remove', payload: { path } });
 }
 
 function setupDropZone() {
@@ -1165,6 +1162,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   docData = doc;
+
+  // Load persisted shared files
+  if (Array.isArray(doc.shared_files) && doc.shared_files.length) {
+    doc.shared_files.forEach(f => showFileCard(f, false));
+  }
 
   // Check expiry
   if (doc.expires_at && new Date(doc.expires_at) < new Date()) {
@@ -1249,13 +1251,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (peer) showTyping(peer.uid, peer.username, peer.color);
   });
 
-  /* Receive: temporary file shared by a peer */
+  /* Receive: file shared by a peer */
   channel.on('broadcast', { event: 'file-share' }, ({ payload }) => {
     if (payload.uid === myUserId) return; // already shown locally
-    showFileCard(payload);
-    // Also schedule our-side cleanup attempt
-    const ttl = Math.max(0, payload.expiresAt - Date.now());
-    setTimeout(() => sb.storage.from(FILE_BUCKET).remove([payload.path]).catch(()=>{}), ttl);
+    showFileCard(payload, false);
+  });
+
+  /* Receive: file removed by a peer */
+  channel.on('broadcast', { event: 'file-remove' }, ({ payload }) => {
+    document.querySelector(`.file-card[data-path="${CSS.escape(payload.path)}"]`)?.remove();
   });
 
   /* Receive: full-doc sync (response to our request-sync) */

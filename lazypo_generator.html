@@ -56,6 +56,32 @@ header .spacer { flex: 1; }
 .btn:active { transform: scale(.97); }
 .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; pointer-events: none; }
 
+/* Export HTML dropdown (mirrors jira_dashboard.html — download / copy
+   the standalone version of this feature). */
+.dropdown { position: relative; display: inline-flex; }
+.dropdown-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: #fff; color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 6px; min-width: 240px;
+  box-shadow: 0 12px 32px rgba(15,23,42,.18);
+  z-index: 200; display: none;
+}
+.dropdown.open .dropdown-menu { display: block; }
+.dropdown-item {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 9px 12px; border-radius: var(--r-sm);
+  cursor: pointer; transition: background .15s;
+}
+.dropdown-item:hover { background: #f1f5fb; }
+.dropdown-item-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.dropdown-item-desc  { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+.dropdown-footer {
+  padding: 8px 12px; font-size: 10px; color: var(--text-faint);
+  border-top: 1px solid var(--border); margin-top: 4px;
+  font-family: 'DM Mono', monospace;
+}
+
 .status-pill {
   display: none; align-items: center; gap: 6px;
   background: rgba(16,185,129,.15); color: #6ee7b7; border: 1px solid rgba(110,231,177,.3);
@@ -226,6 +252,24 @@ input[type="text"]:focus, select:focus, textarea:focus {
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Télécharger .eml
     </button>
+    <div class="dropdown" id="exportHtmlDropdown">
+      <button class="btn btn-ghost" onclick="toggleExportHtmlDropdown(event)" title="Export the standalone feature (offline)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        Export HTML
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="dropdown-menu">
+        <div class="dropdown-item" onclick="exportHTMLDownload()">
+          <span class="dropdown-item-title">Télécharger le fichier</span>
+          <span class="dropdown-item-desc">lazypo_sow.html</span>
+        </div>
+        <div class="dropdown-item" onclick="exportHTMLCopy()">
+          <span class="dropdown-item-title">Copier le code</span>
+          <span class="dropdown-item-desc">copie instantanée</span>
+        </div>
+        <div class="dropdown-footer">Standalone · ouvre par double-clic, fonctionne offline</div>
+      </div>
+    </div>
     <button class="btn btn-primary" onclick="generate()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       Générer
@@ -812,6 +856,75 @@ function copyEmailHtml() {
     const orig = btn.innerHTML;
     btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copié !`;
     setTimeout(() => { btn.innerHTML = orig; }, 2000);
+  });
+}
+
+// ── EXPORT HTML (standalone feature) — same pattern as jira_dashboard.html
+//    Strips auth scripts, resets the preview iframe and disables the export
+//    buttons in the clone so the file works offline by double-click.
+function toggleExportHtmlDropdown(e) {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById('exportHtmlDropdown');
+  dd.classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#exportHtmlDropdown')) {
+    document.getElementById('exportHtmlDropdown')?.classList.remove('open');
+  }
+});
+
+function buildExportHTML() {
+  const doc = document.documentElement.cloneNode(true);
+  // Drop the auth pipeline — exported file must run standalone.
+  doc.querySelectorAll(
+    'script[src*="auth"], script[src*="popup"], script[src*="sidebar"],' +
+    ' script[src*="focusfm"], script[src*="supabase"], script[src*="demo"]'
+  ).forEach(s => s.remove());
+  doc.querySelectorAll('script').forEach(s => {
+    if (s.textContent && s.textContent.includes('LazyAuth.requireModule')) s.remove();
+  });
+  // Sidebar widget shouldn't render in the exported file.
+  doc.querySelectorAll('.sb-shell, .sb-rail, .sb-panel, .sb-backdrop').forEach(el => el.remove());
+  // Reset preview to its empty state — don't ship our current draft.
+  const frame = doc.querySelector('#preview-frame');
+  if (frame) { frame.removeAttribute('srcdoc'); frame.setAttribute('style', 'flex:1;border:none;background:#fff;display:none;'); }
+  const empty = doc.querySelector('#preview-empty');
+  if (empty) empty.style.display = '';
+  // Disable the Export HTML button in the clone (no recursive exports
+  // pointing at a now-empty document state).
+  const dd = doc.querySelector('#exportHtmlDropdown');
+  if (dd) dd.remove();
+  // Action buttons that depend on a generated email come back disabled.
+  ['copy-btn', 'eml-btn'].forEach(id => {
+    const b = doc.querySelector('#' + id);
+    if (b) b.setAttribute('disabled', '');
+  });
+  return '<!DOCTYPE html>\n' + doc.outerHTML;
+}
+
+function exportHTMLDownload() {
+  const html = buildExportHTML();
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'lazypo_sow.html';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 200);
+  document.getElementById('exportHtmlDropdown').classList.remove('open');
+}
+
+function exportHTMLCopy() {
+  const html = buildExportHTML();
+  navigator.clipboard.writeText(html).then(() => {
+    document.getElementById('exportHtmlDropdown').classList.remove('open');
+    // Reuse the existing copy status pill briefly
+    const pill = document.getElementById('status-pill');
+    if (pill) {
+      const orig = pill.innerHTML;
+      pill.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Code copié`;
+      pill.classList.add('show');
+      setTimeout(() => { pill.innerHTML = orig; pill.classList.remove('show'); }, 1800);
+    }
   });
 }
 
